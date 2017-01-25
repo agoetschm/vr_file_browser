@@ -4,7 +4,6 @@ using System.IO;
 
 public class Global : MonoBehaviour {
 
-
 	public Transform firstFolder;
 	public float smoothTime = .1f;
 
@@ -18,12 +17,15 @@ public class Global : MonoBehaviour {
 	private Vector3 targetPosition;
 	private Quaternion targetRotation;
 
-	public void setFocus (Transform newFocus) {
+	public void Reset(){
+		SetFocus (transform.GetChild (1));
+	}
+
+	public void SetFocus (Transform newFocus) {
 		startTime = Time.time;
 
 		// get zoom factor
-		float levelDiff = newFocus.GetComponent<ObjectController> ().level / actualLevel;
-		float zoomFactor = levelDiff;//Mathf.Pow (5, levelDiff);
+		float zoomFactor = newFocus.GetComponent<ObjectController> ().level / actualLevel;
 
 		// set vars to next focus
 		actualFocus = newFocus;
@@ -38,40 +40,41 @@ public class Global : MonoBehaviour {
 		// go through all object and delete/activate the right ones
 		foreach (Transform subObject in transform) {
 			ObjectController subScript = subObject.GetComponent<ObjectController> ();
-			float subLevel = subScript.level;
-			// delete the one of higher level not focused
-			if (subLevel > actualLevel && subScript.enclosing != actualFocus)
-				Destroy (subObject.gameObject);
+			if (subScript != null) { // if it's not the room !!
+				float subLevel = subScript.level;
+				// delete the one of higher level not focused
+				if (subLevel > actualLevel && subScript.enclosing != actualFocus)
+					Destroy (subObject.gameObject);
 			// activate the one of the same level and not focused
-			else if( subLevel == actualLevel && subObject != actualFocus)
-				subObject.gameObject.SetActive(true);
+				else if (subLevel == actualLevel && subObject != actualFocus || subScript.enclosing == actualFocus)
+					subObject.gameObject.SetActive (true);
+			}
 		}
 	}
 
 	void Awake () {
 		Transform folderClone = (Transform) Instantiate (firstFolder, transform);
-		//folderClone.localPosition += new Vector3 (0f, 0f, 4);
-		Camera.main.transform.position = new Vector3 (0f, 0f, -1f);
 
-		// adjust camera at begining
-		//CameraFollowsTarget followScript = Camera.main.GetComponent<CameraFollowsTarget>();
-		//followScript.setTarget (transform.position - transform.rotation * new Vector3(0f, 0f, 4), transform.position, transform.up);
 
-		setFocus(folderClone);
-		folderClone.gameObject.GetComponent<ObjectController> ().path = "/";
-		DirectoryInfo dir = new DirectoryInfo("/");
-		folderClone.GetChild (0).GetComponent<TextMesh> ().text = dir.FullName;
+		SetFocus(folderClone);
 
+		// initialize first folder
+		string path = new DirectoryInfo( Application.persistentDataPath).Parent.Parent.Parent.Parent.FullName; // experimental !
+		folderClone.gameObject.GetComponent<ObjectController> ().path = path;
+		DirectoryInfo dir = new DirectoryInfo(path);
+		folderClone.GetComponent<ObjectController> ().SetText (folderClone, dir.FullName);
+		/*Debug.Log ("-----------------------" + dir.FullName);
+		foreach(FileSystemInfo f in dir.GetFileSystemInfos()){
+			Debug.Log ("-----------------------" + f.Name);
+		}*/
 	}
-
+		
 	void Update () {
+		// animates the object to move them in front of the camera
+
 		float t = Time.time - startTime;
 
 		Vector3 next = Vector3.Slerp (transform.localScale, targetScale, t * smoothTime);
-		/*if (next == transform.localScale) {
-			if (Input.GetKeyDown ("space"))
-				startRescale ();
-		} else */
 		transform.localScale = next;
 
 		transform.position = Vector3.Slerp (transform.position, targetPosition, t * smoothTime);

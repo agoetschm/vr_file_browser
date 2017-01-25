@@ -24,8 +24,12 @@ public class ObjectController : MonoBehaviour {
 
 	private float FOV = 60 * Mathf.PI / 180;//100; // "field of view" -> angle covered by the objects from the point of view of the user
 
-	void OnMouseDown()
+	/// <summary>
+	/// Open this folder, if it is one.
+	/// </summary>
+	public void Open()
 	{
+		Debug.Log ("------------------------------Click");
 		if (isFolder) {
 			// global script
 			Global globalScript = transform.parent.GetComponent<Global> ();
@@ -35,7 +39,7 @@ public class ObjectController : MonoBehaviour {
 				// if it's not the top folder
 				if (enclosing.gameObject.GetComponent<ObjectController> ().enclosing != null) {
 					enclosing.gameObject.SetActive (true);
-					globalScript.setFocus (enclosing.gameObject.GetComponent<ObjectController> ().enclosing);
+					globalScript.SetFocus (enclosing.gameObject.GetComponent<ObjectController> ().enclosing);
 				}
 			} else { // else explore folder			
 				DirectoryInfo dir = new DirectoryInfo (path);
@@ -117,41 +121,13 @@ public class ObjectController : MonoBehaviour {
 								subScript.isPrev = true;
 							} else
 								pathText = actFile.Name;
-							Transform textTransform = subObject.GetChild (0); // should be only the text as child
-							TextMesh textMesh = textTransform.GetComponent<TextMesh> ();
-							textMesh.text = pathText;
 
-							// TODO sub routine
-							// manage overflow
-							// try to replace spaces first
-							float limit = subObject.GetComponent<Renderer> ().bounds.size.x * 0.8f;
-							if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
-								pathText = pathText.Replace (' ', '\n');
-								textMesh.text = pathText;
-							} // then the dots 
-							if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
-								pathText = pathText.Replace (".", "\n.");
-								textMesh.text = pathText;
-							} // finally limit to 7 char per line (I know, it's not precise...)
-							if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
-								string[] lines = pathText.Split ('\n');
-								pathText = "";
-								foreach (string line in lines) {
-									int len = line.Length;
-									for (int k = 0; k < len; k += 7) {
-										pathText += line.Substring (k, Mathf.Min (7, len - k));
-										pathText += "\n";
-									}
-								}
-								pathText = pathText.Trim (); // remove \n at the end
-								textMesh.text = pathText;
-							}
-
-
+							// manage text display
+							SetText(subObject, pathText);
 
 							// set color
 							MeshRenderer meshRenderer = subObject.GetComponent<MeshRenderer> ();
-							meshRenderer.material.shader = Shader.Find ("Self-Illumin/VertexLit");//("Transparent/Bumped Diffuse");
+							meshRenderer.material.shader = Shader.Find ("Transparent/Bumped Diffuse");//("Self-Illumin/VertexLit");
 							if (subScript.isFolder)
 								meshRenderer.material.color = new Color (13f / 255, 71f / 255, 161f / 255, .5f);
 							else
@@ -160,18 +136,48 @@ public class ObjectController : MonoBehaviour {
 					}
 				}
 
-
-				// move camera
-				//CameraFollowsTarget followScript = Camera.main.GetComponent<CameraFollowsTarget>();
-				//followScript.setTarget (transform.position - transform.rotation * new Vector3(0f, 0f, d*2), transform.position, transform.up);
-
 				// disable enclosing object
 				gameObject.SetActive (false);
 
-
 				// start the rescale simulating the zoom (because the camera doesn't "see" objects too close)
-				globalScript.setFocus (transform);
+				globalScript.SetFocus (transform);
 			}
 		}
+	}
+
+	/// <summary>
+	/// Sets the text of a sub folder/file.
+	/// </summary>
+	/// <param name="subObject">Sub object.</param>
+	/// <param name="text">Text.</param>
+	public void SetText(Transform subObject, string text){
+		Transform textTransform = subObject.GetChild (0); // should be only the text as child
+		TextMesh textMesh = textTransform.GetComponent<TextMesh> ();
+		textMesh.text = text;
+		// if overflow :
+		// try to replace spaces first
+		float limit = subObject.GetComponent<Renderer> ().bounds.size.x * 0.8f;
+		if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
+			text = text.Replace (' ', '\n');
+			textMesh.text = text;
+		} // then the dots 
+		if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
+			text = text.Replace (".", "\n.");
+			textMesh.text = text;
+		} // finally limit to 7 char per line (I know, it's not precise...)
+		if (textMesh.GetComponent<Renderer> ().bounds.size.x > limit) {
+			string[] lines = text.Split ('\n');
+			text = "";
+			foreach (string line in lines) {
+				int len = line.Length;
+				for (int k = 0; k < len; k += 7) {
+					text += line.Substring (k, Mathf.Min (7, len - k));
+					text += "\n";
+				}
+			}
+			text = text.Trim (); // remove \n at the end
+			textMesh.text = text;
+		}
+
 	}
 }
